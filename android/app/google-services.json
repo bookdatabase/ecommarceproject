@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "996188243024",
+    "project_id": "eaglesteelfurniture-10a45",
+    "storage_bucket": "eaglesteelfurniture-10a45.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:996188243024:android:2ebed0f4c011ee0100bd55",
+        "android_client_info": {
+          "package_name": "com.example.eaglesteelfurniture"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqFWiIDKEPbTIDRHOF5wwM9nIM_4Xmuss"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
