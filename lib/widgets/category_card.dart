@@ -10,51 +10,44 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 80, // adjust height as needed
-              width: double.infinity,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 60, // Adjust size as needed
+            width: 60,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: category.imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: category.imageUrl,
-
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[200],
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.error),
-                  ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.error),
                 ),
               ),
             ),
+          ),
 
-            // Category Name
-            Padding(
-              padding: const EdgeInsets.all(5),
-              child: Text(
-                category.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+          const SizedBox(height: 4),
+
+          // Category Name
+          Text(
+            category.name,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

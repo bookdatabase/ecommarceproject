@@ -9,6 +9,7 @@ class ProfileScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
+      appBar: AppBar(backgroundColor: Colors.green),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

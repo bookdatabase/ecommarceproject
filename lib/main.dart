@@ -1,10 +1,11 @@
+import 'package:eaglesteelfurniture/screens/home_screen.dart';
+import 'package:eaglesteelfurniture/theme/theme%20management.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'firebase_options.dart';
-import 'screens/home_screen.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,11 +21,13 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider); // 👈 listening to provider
+
     return MaterialApp(
       title: 'Eagle Furniture',
       theme: ThemeData.light().copyWith(
@@ -33,6 +36,13 @@ class MyApp extends StatelessWidget {
           secondary: const Color(0xFF4CAF50),
         ),
       ),
+      darkTheme: ThemeData.dark().copyWith(
+        primaryColor: const Color(0xFF1B5E20),
+        colorScheme: ColorScheme.fromSwatch(
+          brightness: Brightness.dark,
+        ).copyWith(secondary: const Color(0xFF81C784)),
+      ),
+      themeMode: themeMode, // 👈 controlled by provider
       debugShowCheckedModeBanner: false,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),

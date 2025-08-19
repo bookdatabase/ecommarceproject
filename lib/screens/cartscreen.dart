@@ -11,6 +11,7 @@ class CartScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.green,
         title: const Text('Your Cart'),
         actions: [
           IconButton(
@@ -208,18 +209,7 @@ class CartScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Shipping:', style: TextStyle(fontSize: 16)),
-                        Text(
-                          '\$${(total > 0 ? 10 : 0).toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -251,7 +241,7 @@ class CartScreen extends StatelessWidget {
                           backgroundColor: Theme.of(context).primaryColor,
                         ),
                         child: const Text(
-                          'Proceed to Checkout',
+                          'Proceed to Pay',
                           style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
                       ),

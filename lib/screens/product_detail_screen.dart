@@ -5,7 +5,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/product_model.dart';
-import '../core/providers/wishlistprovider.dart';
+
+/// Wishlist StateNotifier
+class WishlistStateNotifier extends StateNotifier<Map<String, bool>> {
+  WishlistStateNotifier() : super({});
+
+  bool isInWishlist(String productId) => state[productId] ?? false;
+
+  void toggle(String productId) {
+    state = {...state, productId: !(state[productId] ?? false)};
+  }
+
+  void set(String productId, bool value) {
+    state = {...state, productId: value};
+  }
+}
+
+/// Global Wishlist provider
+final wishlistStateProvider =
+    StateNotifierProvider<WishlistStateNotifier, Map<String, bool>>(
+      (ref) => WishlistStateNotifier(),
+    );
+
+/// Cart StateNotifier to track cart count
+class CartStateNotifier extends StateNotifier<int> {
+  CartStateNotifier() : super(0);
+
+  void setCount(int count) => state = count;
+
+  void increment(int value) => state += value;
+
+  void decrement(int value) => state -= value;
+}
+
+/// Global Cart provider
+final cartProvider = StateNotifierProvider<CartStateNotifier, int>(
+  (ref) => CartStateNotifier(),
+);
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -19,10 +55,37 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   int quantity = 1;
+  int _selectedImageIndex = 0;
+  bool isLoadingCartCount = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadCartCount();
+  }
+
+  /// Load initial cart count from Firestore
+  Future<void> _loadCartCount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && !user.isAnonymous) {
+      final cartSnapshot = await FirebaseFirestore.instance
+          .collection('carts')
+          .doc(user.uid)
+          .collection('items')
+          .get();
+
+      int totalQuantity = 0;
+      for (var doc in cartSnapshot.docs) {
+        totalQuantity += (doc.data()['quantity'] ?? 0) as int;
+      }
+      ref.read(cartProvider.notifier).setCount(totalQuantity);
+    }
+    setState(() => isLoadingCartCount = false);
+  }
+
+  /// Toggle wishlist with instant UI update
   Future<void> _toggleWishlist() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null || user.isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please log in to use wishlist')),
@@ -36,7 +99,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         .collection('items')
         .doc(widget.product.id);
 
-    final isInWishlist = await wishlistRef.get().then((doc) => doc.exists);
+    final wishlistNotifier = ref.read(wishlistStateProvider.notifier);
+    final isInWishlist = wishlistNotifier.isInWishlist(widget.product.id);
+
+    // Optimistic UI update
+    wishlistNotifier.toggle(widget.product.id);
 
     try {
       if (isInWishlist) {
@@ -53,15 +120,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         );
       }
     } catch (e) {
+      // Revert on error
+      wishlistNotifier.set(widget.product.id, isInWishlist);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
   }
 
+  /// Add to cart with instant feedback and increment badge
   Future<void> _addToCart() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null || user.isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please log in to add to cart')),
@@ -69,13 +138,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       return;
     }
 
-    try {
-      final cartRef = FirebaseFirestore.instance
-          .collection('carts')
-          .doc(user.uid)
-          .collection('items')
-          .doc(widget.product.id);
+    // Increment cart badge instantly
+    ref.read(cartProvider.notifier).increment(quantity);
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${widget.product.name} added to cart')),
+    );
+
+    final cartRef = FirebaseFirestore.instance
+        .collection('carts')
+        .doc(user.uid)
+        .collection('items')
+        .doc(widget.product.id);
+
+    try {
       final cartItem = await cartRef.get();
 
       if (cartItem.exists) {
@@ -95,10 +171,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${widget.product.name} added to cart')),
-      );
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -106,14 +178,58 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     }
   }
 
+  void _openImageGallery(BuildContext context, int initialIndex) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        child: Stack(
+          children: [
+            PageView.builder(
+              itemCount: widget.product.images.length,
+              controller: PageController(initialPage: initialIndex),
+              itemBuilder: (context, index) {
+                return InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 3,
+                  child: CachedNetworkImage(
+                    imageUrl: widget.product.images[index],
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[200],
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.error),
+                    ),
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final isGuest = user == null || user.isAnonymous;
 
-    final isInWishlistAsync = isGuest
-        ? AsyncValue.data(false)
-        : ref.watch(isProductInWishlistProvider(widget.product.id));
+    final isInWishlist =
+        ref.watch(wishlistStateProvider)[widget.product.id] ?? false;
+    final cartCount = ref.watch(cartProvider);
 
     return Scaffold(
       body: CustomScrollView(
@@ -122,57 +238,79 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             expandedHeight: 300,
             pinned: true,
             actions: [
-              // Wishlist button - only for logged in users
               if (!isGuest)
-                isInWishlistAsync.when(
-                  data: (isInWishlist) => IconButton(
-                    icon: Icon(
-                      isInWishlist ? Icons.favorite : Icons.favorite_border,
-                      color: isInWishlist ? Colors.red : Colors.white,
-                    ),
-                    onPressed: _toggleWishlist,
+                IconButton(
+                  icon: Icon(
+                    isInWishlist ? Icons.favorite : Icons.favorite_border,
+                    color: isInWishlist ? Colors.red : Colors.white,
                   ),
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
-                  error: (error, stack) => IconButton(
-                    icon: const Icon(Icons.favorite_border),
-                    onPressed: _toggleWishlist,
-                  ),
+                  onPressed: _toggleWishlist,
                 ),
-              // Cart button
-              IconButton(
-                icon: const Icon(Icons.shopping_cart),
-                onPressed: () {
-                  if (isGuest) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please log in to view cart'),
+              Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                    onPressed: () {
+                      if (isGuest) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please log in to view cart'),
+                          ),
+                        );
+                        return;
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CartScreen(userId: user!.uid),
+                        ),
+                      );
+                    },
+                  ),
+                  if (cartCount > 0)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '$cartCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    );
-                    return;
-                  }
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CartScreen(userId: user!.uid),
                     ),
-                  );
-                },
+                ],
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: CachedNetworkImage(
-                imageUrl: widget.product.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.error),
+              background: GestureDetector(
+                onTap: () => _openImageGallery(context, _selectedImageIndex),
+                child: CachedNetworkImage(
+                  imageUrl: widget.product.images.isNotEmpty
+                      ? widget.product.images[_selectedImageIndex]
+                      : widget.product.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[200],
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.error),
+                  ),
                 ),
               ),
             ),
@@ -183,6 +321,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Product Name
                   Text(
                     widget.product.name,
                     style: const TextStyle(
@@ -191,6 +330,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Rating & Price
                   Row(
                     children: [
                       Row(
@@ -227,6 +368,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
+
+                  // Discount badge
                   if (widget.product.discount != null &&
                       widget.product.discount! > 0)
                     Container(
@@ -246,7 +389,70 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ),
                       ),
                     ),
+
+                  // Images List
+                  if (widget.product.images.length > 1) ...[
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Product Images',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 80,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.product.images.length,
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedImageIndex = index;
+                              });
+                            },
+                            child: Container(
+                              width: 80,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: _selectedImageIndex == index
+                                      ? Theme.of(context).primaryColor
+                                      : Colors.grey[300]!,
+                                  width: _selectedImageIndex == index ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: CachedNetworkImage(
+                                  imageUrl: widget.product.images[index],
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.error),
+                                      ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 24),
+
+                  // Quantity selector
                   if (widget.product.stock > 0) ...[
                     const Text(
                       'Quantity',
@@ -293,6 +499,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
+
+                  // Description
                   const Text(
                     'Description',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -303,68 +511,32 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 32),
-                  Row(
-                    children: [
-                      // Wishlist button
-                      if (!isGuest)
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: isInWishlistAsync.when(
-                              data: (isInWishlist) => Icon(
-                                isInWishlist
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                color: isInWishlist ? Colors.red : null,
-                              ),
-                              loading: () => const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(),
-                              ),
-                              error: (error, stack) =>
-                                  const Icon(Icons.favorite_border),
-                            ),
-                            label: isInWishlistAsync.when(
-                              data: (isInWishlist) => Text(
-                                isInWishlist
-                                    ? 'In Wishlist'
-                                    : 'Add to Wishlist',
-                              ),
-                              loading: () => const Text('Loading...'),
-                              error: (error, stack) =>
-                                  const Text('Add to Wishlist'),
-                            ),
-                            onPressed: _toggleWishlist,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
-                        ),
-                      if (!isGuest) const SizedBox(width: 16),
-                      // Add to Cart button
-                      Expanded(
-                        flex: isGuest ? 1 : 2,
-                        child: ElevatedButton(
-                          onPressed: widget.product.stock > 0
-                              ? _addToCart
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Theme.of(context).primaryColor,
-                          ),
-                          child: Text(
-                            widget.product.stock > 0
-                                ? 'Add to Cart - \$${(widget.product.discountedPrice * quantity).toStringAsFixed(2)}'
-                                : 'Out of Stock',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
-                          ),
+
+                  // Add to cart button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: widget.product.stock > 0 && !isGuest
+                          ? _addToCart
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Theme.of(context).primaryColor,
+                      ),
+                      child: Text(
+                        isGuest
+                            ? 'Login to Add to Cart'
+                            : widget.product.stock > 0
+                            ? 'Add to Cart - \$${(widget.product.discountedPrice * quantity).toStringAsFixed(2)}'
+                            : 'Out of Stock',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
                         ),
                       ),
-                    ],
+                    ),
                   ),
+
                   if (isGuest) ...[
                     const SizedBox(height: 16),
                     Text(

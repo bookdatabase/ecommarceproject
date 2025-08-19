@@ -1,6 +1,8 @@
 import 'package:eaglesteelfurniture/screens/ProfileScreen.dart';
 import 'package:eaglesteelfurniture/screens/WishlistScreen.dart';
 import 'package:eaglesteelfurniture/screens/cartscreen.dart';
+import 'package:eaglesteelfurniture/theme/theme%20management.dart';
+import 'package:eaglesteelfurniture/widgets/SliderWidget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,7 +35,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final user = FirebaseAuth.instance.currentUser;
 
-    // Home Page Content
+    final cartCount = ref.watch(cartProvider); // 👈 Watch cart count
+
+    // Hardcoded slider images
+    final List<String> sliderImages = [
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThr0PnmdP77U7GWF4REfEgiIMiwxogG1p-8W87UGeG21k2X7dUXJowpnFr-C9PoNz387c&usqp=CAU',
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRW_lDBvu4bdFZv-xwMeouDdkE6OHrTT1-MVOalB8vFpDaXn5DriJlSOj1zFGKsGNlt4_M&usqp=CAU',
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBsWzbzG8m4FtOQpq_GMVZ0gOhmXQ-mqeA2cTqob-Vij51CD339bGpDZldAR5biaCkETI&usqp=CAU',
+    ];
+
     Widget buildHomeContent() {
       return RefreshIndicator(
         onRefresh: () async {
@@ -45,22 +55,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SliderWidget(imageUrls: sliderImages),
               const SizedBox(height: 24),
               const Text(
                 'Categories',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               categoriesAsync.when(
                 data: (categories) => SizedBox(
-                  height: 120,
+                  height: 100,
                   child: ListView.builder(
+                    padding: EdgeInsets.zero,
                     scrollDirection: Axis.horizontal,
                     itemCount: categories.length,
                     itemBuilder: (context, index) {
                       final category = categories[index];
                       return SizedBox(
-                        width: 120,
+                        width: 110,
                         child: CategoryCard(
                           category: category,
                           onTap: () {
@@ -80,12 +92,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Error: $error')),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 5),
               const Text(
-                'Deals Hot Of The Day',
+                'Hot Deals',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
               productsAsync.when(
                 data: (products) => GridView.builder(
                   shrinkWrap: true,
@@ -122,23 +134,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
-    // Pages for Bottom Navigation
     final List<Widget> _pages = [
       buildHomeContent(),
-      WishlistScreen(),
-      CartScreen(userId: user?.uid ?? ''), // Pass the current user's UID
-      ProfileScreen(),
+      const WishlistScreen(),
+      CartScreen(userId: user?.uid ?? ''),
+      const ProfileScreen(),
     ];
 
-    // Conditional AppBar
     AppBar? appBar;
     if (_selectedIndex == 0) {
       appBar = AppBar(
         backgroundColor: Colors.green,
-        title: const Text('Home'),
+        title: const Text(''),
+        leading: Consumer(
+          builder: (context, ref, _) {
+            final themeMode = ref.watch(themeProvider);
+            final themeNotifier = ref.read(themeProvider.notifier);
+
+            return IconButton(
+              icon: Icon(
+                color: Colors.white,
+                themeMode == ThemeMode.light
+                    ? Icons.dark_mode
+                    : Icons.light_mode,
+              ),
+              onPressed: () {
+                themeNotifier.toggleTheme();
+              },
+            );
+          },
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
@@ -158,17 +186,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.green,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorites',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.shopping_cart, size: 28),
+                if (cartCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -5,
+                    child: Container(
+                      padding: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$cartCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             label: 'Cart',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );

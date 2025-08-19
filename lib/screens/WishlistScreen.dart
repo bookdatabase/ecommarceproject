@@ -18,6 +18,7 @@ class WishlistScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.green,
         title: const Text('My Wishlist'),
         actions: [
           if (user != null)
