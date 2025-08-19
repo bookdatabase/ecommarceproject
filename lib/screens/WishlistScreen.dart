@@ -149,30 +149,8 @@ class WishlistScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+
                   // Discount Badge
-                  if (product.discount != null && product.discount! > 0)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${product.discount!.toStringAsFixed(0)}% OFF',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -191,34 +169,45 @@ class WishlistScreen extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+
                   const SizedBox(height: 4),
+
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(Icons.star, color: Colors.amber[600], size: 16),
-                      const SizedBox(width: 4),
-                      Text(product.rating.toStringAsFixed(1)),
-                      const Spacer(),
+                      Text(
+                        '\$${product.discountedPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                          fontSize: 16,
+                        ),
+                      ),
                       if (product.discount != null && product.discount! > 0)
-                        Text(
-                          '\$${product.price.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            decoration: TextDecoration.lineThrough,
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${product.discount!.toStringAsFixed(0)}% OFF',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '\$${product.discountedPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Text(
                     product.stock > 0 ? 'In Stock' : 'Out of Stock',
                     style: TextStyle(

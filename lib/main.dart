@@ -26,7 +26,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeProvider); // 👈 listening to provider
+    final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
       title: 'Eagle Furniture',
@@ -42,7 +42,7 @@ class MyApp extends ConsumerWidget {
           brightness: Brightness.dark,
         ).copyWith(secondary: const Color(0xFF81C784)),
       ),
-      themeMode: themeMode, // 👈 controlled by provider
+      themeMode: themeMode,
       debugShowCheckedModeBanner: false,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -55,7 +55,7 @@ class MyApp extends ConsumerWidget {
           if (snapshot.hasData) {
             return const HomeScreen();
           } else {
-            return const LoginScreen();
+            return LoginScreen(); // ✅ Removed const
           }
         },
       ),
@@ -82,6 +82,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
     setState(() => isLoading = true);
 
     try {
@@ -94,6 +101,13 @@ class _LoginScreenState extends State<LoginScreen> {
         await _auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
+        );
+      }
+
+      // Navigate to HomeScreen immediately
+      if (_auth.currentUser != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -109,6 +123,12 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
     try {
       await _auth.signInAnonymously();
+
+      if (_auth.currentUser != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -145,7 +165,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo
                     CircleAvatar(
                       radius: 36,
                       backgroundColor: Colors.green[700],
@@ -156,8 +175,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Title
                     Text(
                       isLogin ? 'Welcome Back' : 'Create Account',
                       style: const TextStyle(
@@ -167,8 +184,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // Email Field
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -181,8 +196,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Password Field
                     TextField(
                       controller: passwordController,
                       obscureText: true,
@@ -195,8 +208,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // Action Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -222,8 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Continue as Guest Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -242,8 +251,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // Toggle Login/SignUp
                     TextButton(
                       onPressed: () {
                         setState(() => isLogin = !isLogin);
