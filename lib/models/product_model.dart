@@ -4,11 +4,12 @@ class Product {
   final String description;
   final double price;
   final double? discount;
+  final int stock;
   final double rating;
   final String imageUrl;
   final List<String> images;
-  final String categoryId;
-  final int stock;
+  final List<String> categories;
+  final bool isFeatured;
 
   Product({
     required this.id,
@@ -16,32 +17,49 @@ class Product {
     required this.description,
     required this.price,
     this.discount,
+    required this.stock,
     required this.rating,
     required this.imageUrl,
     required this.images,
-    required this.categoryId,
-    required this.stock,
+    required this.categories,
+    this.isFeatured = false,
   });
 
   double get discountedPrice {
-    if (discount != null) {
-      return price - (price * discount! / 100);
-    }
-    return price;
+    return discount != null ? price * (1 - discount! / 100) : price;
   }
 
   factory Product.fromMap(Map<String, dynamic> map, String id) {
+    int parseStock(dynamic value) {
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
+    double parseDouble(dynamic value) {
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return Product(
       id: id,
-      name: map['name']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'Unknown Product',
       description: map['description']?.toString() ?? '',
-      price: _parseDouble(map['price']),
-      discount: _parseNullableDouble(map['discount']),
-      rating: _parseDouble(map['rating']),
+      price: parseDouble(map['price']),
+      discount: map['discount'] != null ? parseDouble(map['discount']) : null,
+      stock: parseStock(map['stock']),
+      rating: parseDouble(map['rating']),
       imageUrl: map['imageUrl']?.toString() ?? '',
-      images: _parseStringList(map['images']),
-      categoryId: map['categoryId']?.toString() ?? '',
-      stock: _parseInt(map['stock']),
+      images: map['images'] != null
+          ? List<String>.from(map['images'])
+          : <String>[],
+      categories: map['categories'] != null
+          ? List<String>.from(map['categories'])
+          : <String>[],
+      isFeatured: map['isFeatured'] ?? false,
     );
   }
 
@@ -51,45 +69,12 @@ class Product {
       'description': description,
       'price': price,
       'discount': discount,
+      'stock': stock,
       'rating': rating,
       'imageUrl': imageUrl,
       'images': images,
-      'categoryId': categoryId,
-      'stock': stock,
+      'categories': categories,
+      'isFeatured': isFeatured,
     };
-  }
-
-  // Helper methods for type conversion
-  static double _parseDouble(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
-    return 0.0;
-  }
-
-  static double? _parseNullableDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value);
-    return null;
-  }
-
-  static int _parseInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    if (value is String) return int.tryParse(value) ?? 0;
-    return 0;
-  }
-
-  static List<String> _parseStringList(dynamic value) {
-    if (value == null) return [];
-    if (value is List<String>) return value;
-    if (value is List<dynamic>) {
-      return value.map((e) => e.toString()).toList();
-    }
-    return [];
   }
 }

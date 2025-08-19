@@ -56,13 +56,23 @@ class CartNotifier extends StateNotifier<Cart> {
   }
 
   void incrementQuantity(String productId) {
-    final item = state.items.firstWhere((item) => item.product.id == productId);
-    updateQuantity(productId, item.quantity + 1);
+    final itemIndex = state.items.indexWhere(
+      (item) => item.product.id == productId,
+    );
+    if (itemIndex != -1) {
+      final item = state.items[itemIndex];
+      updateQuantity(productId, item.quantity + 1);
+    }
   }
 
   void decrementQuantity(String productId) {
-    final item = state.items.firstWhere((item) => item.product.id == productId);
-    updateQuantity(productId, item.quantity - 1);
+    final itemIndex = state.items.indexWhere(
+      (item) => item.product.id == productId,
+    );
+    if (itemIndex != -1) {
+      final item = state.items[itemIndex];
+      updateQuantity(productId, item.quantity - 1);
+    }
   }
 
   void clearCart() {
@@ -74,23 +84,27 @@ class CartNotifier extends StateNotifier<Cart> {
   }
 
   int getItemQuantity(String productId) {
-    final item = state.items.firstWhere(
+    final itemIndex = state.items.indexWhere(
       (item) => item.product.id == productId,
-      orElse: () => CartItem(
-        product: Product(
-          id: '',
-          name: '',
-          description: '',
-          price: 0,
-          rating: 0,
-          imageUrl: '',
-          images: [],
-          categoryId: '',
-          stock: 0,
-        ),
-        quantity: 0,
-      ),
     );
-    return item.quantity;
+    if (itemIndex != -1) {
+      return state.items[itemIndex].quantity;
+    }
+    return 0;
+  }
+
+  // Helper method to create a dummy product for error handling
+  Product _createDummyProduct() {
+    return Product(
+      id: '',
+      name: '',
+      description: '',
+      price: 0,
+      stock: 0,
+      rating: 0,
+      imageUrl: '',
+      images: [],
+      categories: [], // Use categories instead of categoryId
+    );
   }
 }
