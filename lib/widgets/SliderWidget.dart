@@ -24,8 +24,8 @@ class _SliderWidgetState extends State<SliderWidget> {
         CarouselSlider(
           options: CarouselOptions(
             autoPlay: true,
-            enlargeCenterPage: true,
-            viewportFraction: 1,
+            enlargeCenterPage: false, // Disable enlargement to remove gaps
+            viewportFraction: 1.0, // Full width
             autoPlayInterval: const Duration(seconds: 5),
             autoPlayAnimationDuration: const Duration(milliseconds: 800),
             onPageChanged: (index, reason) {
@@ -35,22 +35,26 @@ class _SliderWidgetState extends State<SliderWidget> {
             },
           ),
           items: widget.imageUrls.map((url) {
-            return ClipRRect(
-              child: Image.network(
-                url,
-                width: double.infinity,
-
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: Colors.grey,
-                  child: const Icon(Icons.error),
+            return Container(
+              width: double.infinity, // Make image full width
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(0), // no rounding
+                child: Image.network(
+                  url,
+                  fit: BoxFit.cover, // Fill the space
+                  width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey,
+                    child: const Icon(Icons.error),
+                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Center(child: CircularProgressIndicator()),
+                    );
+                  },
                 ),
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey[200],
-                    child: const Center(child: CircularProgressIndicator()),
-                  );
-                },
               ),
             );
           }).toList(),

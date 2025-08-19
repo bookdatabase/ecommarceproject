@@ -26,21 +26,22 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Color myColor = Color(0xFF861F41);
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
       title: 'Eagle Furniture',
       theme: ThemeData.light().copyWith(
-        primaryColor: const Color(0xFF2E7D32),
+        primaryColor: myColor,
         colorScheme: ColorScheme.fromSwatch().copyWith(
-          secondary: const Color(0xFF4CAF50),
+          secondary: myColor,
         ),
       ),
       darkTheme: ThemeData.dark().copyWith(
-        primaryColor: const Color(0xFF1B5E20),
+        primaryColor: myColor,
         colorScheme: ColorScheme.fromSwatch(
           brightness: Brightness.dark,
-        ).copyWith(secondary: const Color(0xFF81C784)),
+        ).copyWith(secondary: myColor),
       ),
       themeMode: themeMode,
       debugShowCheckedModeBanner: false,
@@ -72,20 +73,34 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   bool isLogin = true;
   bool isLoading = false;
+  bool showPassword = false;
+  bool showConfirmPassword = false;
 
   Future<void> authenticate() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
+    final fullName = fullNameController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) {
+    if (email.isEmpty || password.isEmpty || (!isLogin && fullName.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
+        const SnackBar(content: Text('Please fill all required fields')),
       );
+      return;
+    }
+
+    if (!isLogin && password != confirmPasswordController.text.trim()) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
 
@@ -98,13 +113,11 @@ class _LoginScreenState extends State<LoginScreen> {
           password: password,
         );
       } else {
-        await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+        UserCredential userCredential = await _auth
+            .createUserWithEmailAndPassword(email: email, password: password);
+        await userCredential.user?.updateDisplayName(fullName);
       }
 
-      // Navigate to HomeScreen immediately
       if (_auth.currentUser != null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -112,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Authentication Error')),
+        SnackBar(content: Text(e.message ?? 'Authentication error')),
       );
     } finally {
       setState(() => isLoading = false);
@@ -123,16 +136,15 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
     try {
       await _auth.signInAnonymously();
-
       if (_auth.currentUser != null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Guest Login Error')));
+      ).showSnackBar(const SnackBar(content: Text('Guest login failed')));
     } finally {
       setState(() => isLoading = false);
     }
@@ -169,45 +181,94 @@ class _LoginScreenState extends State<LoginScreen> {
                       radius: 36,
                       backgroundColor: Colors.green[700],
                       child: const Icon(
-                        Icons.home_filled,
+                        Icons.person_add,
                         size: 40,
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      isLogin ? 'Welcome Back' : 'Create Account',
+                      isLogin ? 'Welcome Back' : 'Sign Up Account',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+
+                    if (!isLogin)
+                      TextField(
+                        controller: fullNameController,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          prefixIcon: const Icon(Icons.person),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    if (!isLogin) const SizedBox(height: 16),
+
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.email),
                         labelText: 'Email',
+                        prefixIcon: const Icon(Icons.email),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
+
                     TextField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: !showPassword,
                       decoration: InputDecoration(
+                        labelText: isLogin ? 'Password' : 'Create Password',
                         prefixIcon: const Icon(Icons.lock),
-                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            showPassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () =>
+                              setState(() => showPassword = !showPassword),
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+
+                    if (!isLogin)
+                      TextField(
+                        controller: confirmPasswordController,
+                        obscureText: !showConfirmPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              showConfirmPassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () => setState(
+                              () => showConfirmPassword = !showConfirmPassword,
+                            ),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    if (!isLogin) const SizedBox(height: 16),
+
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -233,6 +294,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Continue as Guest Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -246,19 +309,41 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: const Text(
                           'Continue as Guest',
-                          style: TextStyle(fontSize: 18, color: Colors.green),
+                          style: TextStyle(fontSize: 16, color: Colors.green),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    const Text(
+                      'Or Sign Up With',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(
+                              Icons.g_mobiledata,
+                              color: Colors.red,
+                            ),
+                            label: const Text('Google'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
                     TextButton(
-                      onPressed: () {
-                        setState(() => isLogin = !isLogin);
-                      },
+                      onPressed: () => setState(() => isLogin = !isLogin),
                       child: Text(
                         isLogin
                             ? 'Don\'t have an account? Sign Up'
-                            : 'Already have an account? Login',
+                            : 'Already have an account? Sign In',
                         style: TextStyle(color: Colors.green[800]),
                       ),
                     ),

@@ -31,6 +31,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Color myColor = Color(0xFF861F41);
     final productsAsync = ref.watch(productsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
     final user = FirebaseAuth.instance.currentUser;
@@ -144,7 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     AppBar? appBar;
     if (_selectedIndex == 0) {
       appBar = AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: myColor,
         title: const Text(''),
         leading: Consumer(
           builder: (context, ref, _) {
