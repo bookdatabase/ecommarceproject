@@ -24,6 +24,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Color primaryColor = const Color(0xFF861F41);
+
     // Use the repository from the provider
     final productRepository = ref.watch(productRepositoryProvider);
 
@@ -34,11 +36,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ), // ← Back arrow colo
+        backgroundColor: primaryColor,
+        elevation: 4,
+        shadowColor: Colors.black.withOpacity(0.3),
+        titleSpacing: 0,
         title: TextField(
           controller: _searchController,
-          decoration: const InputDecoration(
+          style: const TextStyle(color: Colors.white),
+          cursorColor: Colors.white,
+          decoration: InputDecoration(
             hintText: 'Search products...',
+            hintStyle: TextStyle(color: Colors.white70),
             border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
           ),
           onChanged: (value) {
             setState(() {
@@ -49,7 +62,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         actions: [
           if (_searchQuery.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.clear),
+              icon: const Icon(Icons.clear, color: Colors.white),
               onPressed: () {
                 setState(() {
                   _searchQuery = '';

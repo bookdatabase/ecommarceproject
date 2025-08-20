@@ -11,6 +11,8 @@ import 'product_detail_screen.dart';
 class WishlistScreen extends ConsumerWidget {
   const WishlistScreen({super.key});
 
+  final Color primaryColor = const Color(0xFF861F41);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wishlistAsync = ref.watch(wishlistProvider);
@@ -18,15 +20,13 @@ class WishlistScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
-        title: const Text('My Wishlist'),
+        backgroundColor: primaryColor,
+        title: const Text('My Wishlist', style: TextStyle(color: Colors.white)),
         actions: [
           if (user != null)
             IconButton(
-              icon: const Icon(Icons.delete_sweep),
-              onPressed: () {
-                _showClearWishlistDialog(context, user.uid);
-              },
+              icon: const Icon(Icons.delete_sweep, color: Colors.white),
+              onPressed: () => _showClearWishlistDialog(context, user.uid),
             ),
         ],
       ),
@@ -47,6 +47,7 @@ class WishlistScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.refresh(wishlistProvider),
+                style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
                 child: const Text('Retry'),
               ),
             ],
@@ -81,7 +82,7 @@ class WishlistScreen extends ConsumerWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              childAspectRatio: 0.7,
+              childAspectRatio: 0.65,
             ),
             itemCount: wishlistItems.length,
             itemBuilder: (context, index) {
@@ -99,7 +100,9 @@ class WishlistScreen extends ConsumerWidget {
     Product product,
     String? userId,
   ) {
-    return Card(
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -109,6 +112,7 @@ class WishlistScreen extends ConsumerWidget {
             ),
           );
         },
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -116,17 +120,24 @@ class WishlistScreen extends ConsumerWidget {
             Expanded(
               child: Stack(
                 children: [
-                  CachedNetworkImage(
-                    imageUrl: product.imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[200],
-                      child: const Center(child: CircularProgressIndicator()),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.error),
+                    child: CachedNetworkImage(
+                      imageUrl: product.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (context, url) => Container(
+                        color: primaryColor.withOpacity(0.1),
+                        child: Center(
+                          child: CircularProgressIndicator(color: primaryColor),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: primaryColor.withOpacity(0.1),
+                        child: Icon(Icons.error, size: 40, color: primaryColor),
+                      ),
                     ),
                   ),
                   // Remove from Wishlist Button
@@ -143,18 +154,39 @@ class WishlistScreen extends ConsumerWidget {
                             size: 16,
                             color: Colors.red,
                           ),
-                          onPressed: () {
-                            _removeFromWishlist(context, userId, product.id);
-                          },
+                          onPressed: () =>
+                              _removeFromWishlist(context, userId, product.id),
                         ),
                       ),
                     ),
-
                   // Discount Badge
+                  if (product.discount != null && product.discount! > 0)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${product.discount!.toStringAsFixed(0)}% OFF',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
-            // Product Details
+            // Product Details with Price and Stock side by side
             Padding(
               padding: const EdgeInsets.all(8),
               child: Column(
@@ -169,51 +201,27 @@ class WishlistScreen extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-
                   const SizedBox(height: 4),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         '\$${product.discountedPrice.toStringAsFixed(2)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green,
+                          color: primaryColor,
                           fontSize: 16,
                         ),
                       ),
-                      if (product.discount != null && product.discount! > 0)
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${product.discount!.toStringAsFixed(0)}% OFF',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                      Text(
+                        product.stock > 0 ? 'In Stock' : 'Out of Stock',
+                        style: TextStyle(
+                          color: product.stock > 0 ? primaryColor : Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
                     ],
-                  ),
-                  Text(
-                    product.stock > 0 ? 'In Stock' : 'Out of Stock',
-                    style: TextStyle(
-                      color: product.stock > 0 ? Colors.green : Colors.red,
-                      fontSize: 12,
-                    ),
                   ),
                 ],
               ),
@@ -250,27 +258,25 @@ class WishlistScreen extends ConsumerWidget {
   void _showClearWishlistDialog(BuildContext context, String userId) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Clear Wishlist'),
-          content: const Text(
-            'Are you sure you want to clear your entire wishlist?',
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Clear Wishlist'),
+        content: const Text(
+          'Are you sure you want to clear your entire wishlist?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _clearWishlist(context, userId);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Clear All'),
-            ),
-          ],
-        );
-      },
+          TextButton(
+            onPressed: () {
+              _clearWishlist(context, userId);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
     );
   }
 

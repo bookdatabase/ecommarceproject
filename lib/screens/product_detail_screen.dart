@@ -235,6 +235,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            iconTheme: const IconThemeData(
+              color: Colors.white,
+            ), // ← Back arrow colo
             expandedHeight: 300,
             pinned: true,
             actions: [

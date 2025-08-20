@@ -3,20 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Notifier for theme management
 class ThemeNotifier extends StateNotifier<ThemeMode> {
-  ThemeNotifier() : super(ThemeMode.system);
+  ThemeNotifier() : super(ThemeMode.light); // Default to Light theme
 
   /// Toggle between light and dark
   void toggleTheme() {
-    if (state == ThemeMode.light) {
-      state = ThemeMode.dark;
-    } else {
-      state = ThemeMode.light;
-    }
+    state = state == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
   }
 
   /// Set theme directly
   void setTheme(ThemeMode mode) {
-    state = mode;
+    if (mode == ThemeMode.light || mode == ThemeMode.dark) {
+      state = mode;
+    }
   }
 }
 

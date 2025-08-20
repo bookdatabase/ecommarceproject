@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class CartScreen extends StatelessWidget {
   final String userId;
 
   const CartScreen({super.key, required this.userId});
 
+  final Color primaryColor = const Color(0xFF861F41);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
-        title: const Text('Your Cart'),
+        backgroundColor: primaryColor,
+        title: const Text('Your Cart', style: TextStyle(color: Colors.white)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete),
+            icon: const Icon(Icons.delete, color: Colors.white),
             onPressed: () => _clearCart(context),
           ),
         ],
@@ -28,7 +29,9 @@ class CartScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(color: primaryColor),
+            );
           }
 
           if (snapshot.hasError) {
@@ -162,7 +165,11 @@ class CartScreen extends StatelessWidget {
                                               .delete();
                                         }
                                       },
-                                      child: const Icon(Icons.remove, size: 20),
+                                      child: Icon(
+                                        Icons.remove,
+                                        size: 20,
+                                        color: primaryColor,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     InkWell(
@@ -178,7 +185,11 @@ class CartScreen extends StatelessWidget {
                                                   FieldValue.serverTimestamp(),
                                             });
                                       },
-                                      child: const Icon(Icons.add, size: 20),
+                                      child: Icon(
+                                        Icons.add,
+                                        size: 20,
+                                        color: primaryColor,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -194,7 +205,7 @@ class CartScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: primaryColor.withOpacity(0.1),
                   border: Border(top: BorderSide(color: Colors.grey.shade300)),
                 ),
                 child: Column(
@@ -209,7 +220,6 @@ class CartScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -238,7 +248,7 @@ class CartScreen extends StatelessWidget {
                             : null,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Theme.of(context).primaryColor,
+                          backgroundColor: primaryColor,
                         ),
                         child: const Text(
                           'Proceed to Pay',

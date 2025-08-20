@@ -16,6 +16,8 @@ class ProductCard extends StatelessWidget {
     this.isFavorite = false,
   });
 
+  final Color primaryColor = const Color(0xFF861F41);
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -41,16 +43,20 @@ class ProductCard extends StatelessWidget {
                       imageUrl: product.imageUrl,
                       height: 140,
                       width: double.infinity,
-
                       placeholder: (context, url) => Container(
-                        color: Colors.grey[200],
+                        color: primaryColor.withOpacity(0.1),
                         height: 140,
-                        child: const Center(child: CircularProgressIndicator()),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: primaryColor,
+                          ),
+                        ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[200],
+                        color: primaryColor.withOpacity(0.1),
                         height: 140,
-                        child: const Icon(Icons.error, size: 40),
+                        child: Icon(Icons.error, size: 40, color: primaryColor),
                       ),
                     ),
                   ),
@@ -69,7 +75,7 @@ class ProductCard extends StatelessWidget {
                           ),
                           child: Icon(
                             isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: Colors.redAccent,
+                            color: primaryColor,
                             size: 20,
                           ),
                         ),
@@ -113,24 +119,16 @@ class ProductCard extends StatelessWidget {
                             style: const TextStyle(fontSize: 11),
                           ),
                           const Spacer(),
-                          if (product.stock == 0)
-                            Text(
-                              'Out of Stock',
-                              style: TextStyle(
-                                color: Colors.red[600],
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          else
-                            Text(
-                              'In Stock',
-                              style: TextStyle(
-                                color: Colors.green[600],
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          Text(
+                            product.stock == 0 ? 'Out of Stock' : 'In Stock',
+                            style: TextStyle(
+                              color: product.stock == 0
+                                  ? Colors.red[600]
+                                  : primaryColor, // primary color for in-stock
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
                         ],
                       ),
 
@@ -144,25 +142,12 @@ class ProductCard extends StatelessWidget {
                           // Discounted Price
                           Text(
                             '\$${product.discountedPrice.toStringAsFixed(2)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              color: Colors.green,
+                              color: primaryColor, // primary color for price
                             ),
                           ),
-
-                          const SizedBox(width: 8),
-
-                          // Original Price if discount exists
-                          // if (product.discount != null && product.discount! > 0)
-                          //   Text(
-                          //     '\$${product.price.toStringAsFixed(2)}',
-                          //     style: TextStyle(
-                          //       fontSize: 12,
-                          //       color: Colors.grey[600],
-                          //       decoration: TextDecoration.lineThrough,
-                          //     ),
-                          //   ),
 
                           // Discount Badge
                           if (product.discount != null && product.discount! > 0)
@@ -172,7 +157,8 @@ class ProductCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.redAccent,
+                                color:
+                                    primaryColor, // primary color for discount
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(

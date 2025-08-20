@@ -15,7 +15,14 @@ class CategoryScreen extends ConsumerWidget {
     final productsAsync = ref.watch(productsByCategoryProvider(category.id));
 
     return Scaffold(
-      appBar: AppBar(title: Text(category.name)),
+      appBar: AppBar(
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ), // ← Back arrow colo
+        title: Text(category.name, style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        backgroundColor: Color(0xFF861F41),
+      ),
       body: productsAsync.when(
         data: (products) => products.isEmpty
             ? const Center(child: Text('No products found in this category'))

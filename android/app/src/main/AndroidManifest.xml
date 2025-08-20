@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="eaglesteelfurniture"
+        android:label="Eagle Steel Furniture"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

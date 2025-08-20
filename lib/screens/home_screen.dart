@@ -4,6 +4,7 @@ import 'package:eaglesteelfurniture/screens/cartscreen.dart';
 import 'package:eaglesteelfurniture/theme/theme%20management.dart';
 import 'package:eaglesteelfurniture/widgets/SliderWidget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/product_card.dart';
@@ -29,16 +30,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  // --- Helper to get user's display name ---
+  String _getDisplayName(User? user) {
+    if (user == null) return 'User';
+    if (user.displayName != null && user.displayName!.isNotEmpty) {
+      return user.displayName!;
+    }
+    if (user.email != null && user.email!.isNotEmpty) {
+      return user.email!.split('@')[0]; // use email prefix
+    }
+    return 'User';
+  }
+
   @override
   Widget build(BuildContext context) {
-    Color myColor = Color(0xFF861F41);
+    final Color primaryColor = const Color(0xFF861F41);
     final productsAsync = ref.watch(productsProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
     final user = FirebaseAuth.instance.currentUser;
+    final cartCount = ref.watch(cartProvider);
 
-    final cartCount = ref.watch(cartProvider); // 👈 Watch cart count
-
-    // Hardcoded slider images
     final List<String> sliderImages = [
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThr0PnmdP77U7GWF4REfEgiIMiwxogG1p-8W87UGeG21k2X7dUXJowpnFr-C9PoNz387c&usqp=CAU',
       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRW_lDBvu4bdFZv-xwMeouDdkE6OHrTT1-MVOalB8vFpDaXn5DriJlSOj1zFGKsGNlt4_M&usqp=CAU',
@@ -65,7 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 20),
               categoriesAsync.when(
                 data: (categories) => SizedBox(
-                  height: 100,
+                  height: 90,
                   child: ListView.builder(
                     padding: EdgeInsets.zero,
                     scrollDirection: Axis.horizontal,
@@ -93,7 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Error: $error')),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 13),
               const Text(
                 'Hot Deals',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -145,36 +156,126 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     AppBar? appBar;
     if (_selectedIndex == 0) {
       appBar = AppBar(
-        backgroundColor: myColor,
-        title: const Text(''),
-        leading: Consumer(
-          builder: (context, ref, _) {
-            final themeMode = ref.watch(themeProvider);
-            final themeNotifier = ref.read(themeProvider.notifier);
-
-            return IconButton(
-              icon: Icon(
-                color: Colors.white,
-                themeMode == ThemeMode.light
-                    ? Icons.dark_mode
-                    : Icons.light_mode,
-              ),
-              onPressed: () {
-                themeNotifier.toggleTheme();
-              },
-            );
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
+        backgroundColor: primaryColor,
+        elevation: 4,
+        shadowColor: Colors.black.withOpacity(0.3),
+        titleSpacing: 0,
+        leadingWidth: 160, // Adjust width for avatar + name
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SearchScreen()),
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      const ProfileScreen(),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                  transitionDuration: const Duration(milliseconds: 300),
+                ),
+              );
+            },
+            child: Row(
+              children: [
+                // Avatar
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.white.withOpacity(0.9),
+                    backgroundImage: user?.photoURL != null
+                        ? NetworkImage(user!.photoURL!)
+                        : null,
+                    child: user?.photoURL == null
+                        ? Text(
+                            _getDisplayName(user)[0].toUpperCase(),
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // User Name
+                Flexible(
+                  child: Text(
+                    _getDisplayName(user),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final themeMode = ref.watch(themeProvider);
+              final themeNotifier = ref.read(themeProvider.notifier);
+              return IconButton(
+                icon: Icon(
+                  themeMode == ThemeMode.light
+                      ? Icons.dark_mode_outlined
+                      : Icons.light_mode_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                onPressed: () {
+                  themeNotifier.toggleTheme();
+                  HapticFeedback.lightImpact();
+                },
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white, size: 24),
+            onPressed: () {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      const SearchScreen(),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        var begin = const Offset(0.0, 1.0);
+                        var end = Offset.zero;
+                        var curve = Curves.easeInOut;
+                        var tween = Tween(
+                          begin: begin,
+                          end: end,
+                        ).chain(CurveTween(curve: curve));
+                        return SlideTransition(
+                          position: animation.drive(tween),
+                          child: child,
+                        );
+                      },
+                  transitionDuration: const Duration(milliseconds: 350),
+                ),
+              );
+              HapticFeedback.lightImpact();
+            },
+          ),
+          const SizedBox(width: 8),
         ],
       );
     }
@@ -186,7 +287,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.green,
+        selectedItemColor: primaryColor,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           const BottomNavigationBarItem(
